@@ -1,5 +1,6 @@
-import sqlite3, tempfile, os, datetime
-from app import SCHEMA_SQL, init_db, gen_nomor, save_pengajuan, is_late, can_transition, validate_form
+import sqlite3, tempfile, os, datetime, io
+import config
+from app import SCHEMA_SQL, init_db, create_app, gen_nomor, save_pengajuan, is_late, can_transition, validate_form
 
 def test_init_db_membuat_tabel_cuti():
     with tempfile.TemporaryDirectory() as d:
@@ -65,3 +66,43 @@ def test_save_pengajuan_tersimpan_dan_status_baru():
         conn.close()
         assert row["nama"] == "Budi"
         assert row["status"] == "Baru"
+
+
+def _client_di_dir(d):
+    config.DB_PATH = os.path.join(d, "test.db")
+    config.UPLOAD_FOLDER = os.path.join(d, "uploads")
+    app = create_app()
+    return app.test_client()
+
+def _post_berkas(client, nama_file, ukuran):
+    return client.post("/", data={
+        "nama": "Dewi", "nip": "99887", "jenis": "sakit",
+        "tgl_mulai": "2026-08-13", "tgl_selesai": "2026-08-14",
+        "berkas": (io.BytesIO(b"x" * ukuran), nama_file),
+    }, content_type="multipart/form-data")
+
+def test_upload_ditolak_bila_lebih_dari_5mb():
+    with tempfile.TemporaryDirectory() as d:
+        client = _client_di_dir(d)
+        r = _post_berkas(client, "big.jpg", 5 * 1024 * 1024 + 1)
+        assert r.status_code == 400
+        assert "MB" in r.get_data(as_text=True)
+        assert os.listdir(config.UPLOAD_FOLDER) == []
+        conn = sqlite3.connect(config.DB_PATH)
+        n = conn.execute("SELECT COUNT(*) FROM cuti").fetchone()[0]
+        conn.close()
+        assert n == 0
+
+def test_upload_kecil_diterima_dan_tersimpan():
+    with tempfile.TemporaryDirectory() as d:
+        client = _client_di_dir(d)
+        r = _post_berkas(client, "ok.jpg", 1024)
+        assert r.status_code != 400
+        assert len(os.listdir(config.UPLOAD_FOLDER)) == 1
+        conn = sqlite3.connect(config.DB_PATH)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM cuti").fetchone()
+        conn.close()
+        assert row["nama"] == "Dewi"
+        assert row["status"] == "Baru"
+        assert row["nomor"].startswith("CUT-")

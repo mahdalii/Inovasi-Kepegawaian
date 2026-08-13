@@ -123,7 +123,12 @@ def create_app():
         if request.method == "POST":
             f = request.files.get("berkas")
             berkas_ok = f is not None and f.filename and allowed_ext(f.filename)
-            size_ok = f is not None and f.content_length is not None and f.content_length <= config.MAX_UPLOAD_MB * 1024 * 1024
+            size = None
+            if f is not None:
+                f.stream.seek(0, os.SEEK_END)
+                size = f.stream.tell()
+                f.stream.seek(0)
+            size_ok = size is not None and size <= config.MAX_UPLOAD_MB * 1024 * 1024
             errors = validate_form(
                 request.form.get("nama", ""), request.form.get("nip", ""),
                 request.form.get("jenis", ""), request.form.get("tgl_mulai", ""),
