@@ -152,6 +152,19 @@ def create_app():
         return render_template("form.html", jenis_labels=JENIS_LABEL,
                                berkas_labels=BERKAS_LABEL)
 
+    @app.route("/status", methods=["GET", "POST"])
+    def status():
+        rows, nip = [], request.form.get("nip", "")
+        if request.method == "POST":
+            conn = get_conn()
+            rows = conn.execute(
+                "SELECT * FROM cuti WHERE nip=? ORDER BY tgl_masuk DESC, id DESC",
+                (nip.strip(),),
+            ).fetchall()
+            conn.close()
+        return render_template("status.html", rows=rows, nip=nip,
+                               jenis_labels=JENIS_LABEL)
+
     return app
 
 
