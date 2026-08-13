@@ -3,7 +3,7 @@
 {% block content %}
 <div class="card animate-in">
   <div class="row-between">
-    <h2>📥 Antrian Pengajuan Cuti</h2>
+    <h2>Antrian Pengajuan Cuti</h2>
     <a class="btn" href="{{ url_for('logout') }}">Keluar</a>
   </div>
   <form method="get">
@@ -27,7 +27,7 @@
 {% set terlambat = rows | selectattr('id', 'in', late_ids) | list %}
 {% if terlambat %}
 <div class="card late-card animate-in delay-1">
-  <h3>⚠️ Perlu Perhatian (belum selesai > 2 hari)</h3>
+  <h3>Perlu Perhatian — belum diproses lebih dari 2 hari</h3>
   <table class="table">
     <thead><tr><th>Nomor</th><th>Nama</th><th>UPTD</th><th>Jenis</th><th>Masuk</th><th>Status</th></tr></thead>
     <tbody>

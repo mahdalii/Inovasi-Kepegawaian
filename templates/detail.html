@@ -4,7 +4,7 @@
 <div class="card animate-in">
   <div class="row-between">
     <h2>{{ row.nomor }} — {{ row.nama }}</h2>
-    <a class="btn" href="{{ url_for('dashboard') }}">← Kembali</a>
+    <a class="btn btn-sekunder" href="{{ url_for('dashboard') }}">Kembali</a>
   </div>
   <table class="table table-detail">
     <tr><th>Nama</th><td>{{ row.nama }}</td></tr>
@@ -13,7 +13,7 @@
     <tr><th>Tanggal Cuti</th><td>{{ row.tgl_mulai }} s/d {{ row.tgl_selesai }}</td></tr>
     <tr><th>Tanggal Masuk</th><td>{{ row.tgl_masuk }}</td></tr>
     <tr><th>Status</th><td><span class="badge badge-{{ row.status|lower }} status-badge" data-status="{{ row.status|lower }}">{{ row.status }}</span></td></tr>
-    <tr><th>Berkas</th><td><a class="btn" href="{{ url_for('unduh_berkas', filename=row.berkas) }}" target="_blank">⬇ Unduh Berkas</a></td></tr>
+    <tr><th>Berkas</th><td><a class="btn btn-sekunder" href="{{ url_for('unduh_berkas', filename=row.berkas) }}" target="_blank">Unduh Berkas</a></td></tr>
   </table>
 
   <form method="post" class="status-form">

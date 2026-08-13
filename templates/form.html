@@ -3,12 +3,12 @@
 {% block content %}
 {% if success %}
 <div class="card animate-in">
-  <h2>✅ Berhasil terkirim</h2>
-  <p>Catat atau foto nomor di bawah ini ya:</p>
+  <h2>Pengajuan berhasil dikirim</h2>
+  <p>Catat atau foto nomor di bawah ini, ya.</p>
   <p class="nomor-besar">{{ success }}</p>
-  <p>Dengan nomor ini Anda bisa lihat statusnya kapan saja di halaman
+  <p>Dengan nomor ini Anda dapat melihat status kapan saja di halaman
      <a href="{{ url_for('status') }}">Cek Status</a>.</p>
-  <a class="btn btn-besar" href="{{ url_for('form_pegawai') }}">Ajukan cuti lagi</a>
+  <a class="btn btn-primary btn-besar" href="{{ url_for('form_pegawai') }}">Ajukan cuti lagi</a>
 </div>
 {% else %}
 <div class="card animate-in">
@@ -17,10 +17,11 @@
      <b>Kirim</b>. Tidak sampai 2 menit.</p>
   {% if errors %}<ul class="errors">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
   <form method="post" enctype="multipart/form-data">
-    <label>1. Nama Lengkap
+    <label><span class="field-num">1</span>Nama Lengkap
+      <small>Contoh: Siti Rahma</small>
       <input name="nama" value="{{ data.nama if data }}" placeholder="Contoh: Siti Rahma" required>
     </label>
-    <label>2. Tempat Kerja (UPTD PPD)
+    <label><span class="field-num">2</span>Tempat Kerja (UPTD PPD)
       <select name="uptd" required>
         <option value="">— pilih tempat kerja —</option>
         {% for k, v in uptd_labels.items() %}
@@ -28,7 +29,7 @@
         {% endfor %}
       </select>
     </label>
-    <label>3. Jenis Cuti
+    <label><span class="field-num">3</span>Jenis Cuti
       <select name="jenis" id="jenis" required>
         <option value="">— pilih jenis cuti —</option>
         {% for k, v in jenis_labels.items() %}
@@ -36,9 +37,13 @@
         {% endfor %}
       </select>
     </label>
-    <label>4. Tanggal Mulai Cuti <input type="date" name="tgl_mulai" required></label>
-    <label>5. Tanggal Selesai Cuti <input type="date" name="tgl_selesai" required></label>
-    <label id="label-berkas">6. <span>Berkas Pendukung</span>
+    <label><span class="field-num">4</span>Tanggal Mulai Cuti
+      <input type="date" name="tgl_mulai" required>
+    </label>
+    <label><span class="field-num">5</span>Tanggal Selesai Cuti
+      <input type="date" name="tgl_selesai" required>
+    </label>
+    <label id="label-berkas"><span class="field-num">6</span><span id="label-berkas-text">Berkas Pendukung</span>
       <input type="file" name="berkas" accept=".pdf,.jpg,.jpeg,.png" required>
     </label>
     <p class="hint" id="hint-berkas">Boleh foto dari HP. Maksimal 5 MB.</p>
@@ -60,7 +65,7 @@ const hints = {
 const select = document.getElementById("jenis");
 select.addEventListener("change", (e) => {
   if (labels[e.target.value]) {
-    document.querySelector("#label-berkas span").textContent = labels[e.target.value];
+    document.getElementById("label-berkas-text").textContent = labels[e.target.value];
     document.getElementById("hint-berkas").textContent = hints[e.target.value];
   }
 });

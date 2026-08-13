@@ -3,14 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Sistem Cuti{% endblock %} — Kepegawaian</title>
+<title>{% block title %}Sistem Cuti{% endblock %} — Sekretariat Bapenda Prov Kepri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Mono:wght@500&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<header class="topbar"><h1>📋 Sistem Pengajuan Cuti</h1></header>
+<header class="kop">
+  <svg class="stempel" viewBox="0 0 100 100" aria-hidden="true">
+    <defs><path id="stempel-arc" d="M50,50 m-33.5,0 a33.5,33.5 0 1,1 67,0 a33.5,33.5 0 1,1 -67,0"/></defs>
+    <circle cx="50" cy="50" r="48.5" fill="none" stroke="currentColor" stroke-width="1"/>
+    <circle cx="50" cy="50" r="29" fill="none" stroke="currentColor" stroke-width="0.7"/>
+    <text font-size="8" letter-spacing="1.2" fill="currentColor">
+      <textPath href="#stempel-arc" startOffset="50%" text-anchor="middle">SEKRETARIAT BAPENDA · PROV KEPRI</textPath>
+    </text>
+    <text x="50" y="56" text-anchor="middle" font-size="15" font-weight="700">SB</text>
+    <text x="50" y="63.5" text-anchor="middle" font-size="3.4" letter-spacing="2.5">2026</text>
+  </svg>
+  <p class="kop-instansi">Pemerintah Provinsi Kepulauan Riau</p>
+  <h1 class="kop-nama">Sekretariat Badan Pendapatan Daerah</h1>
+  <p class="kop-sub">Sistem Informasi Pengajuan Cuti Pegawai</p>
+  <div class="kop-rule"><i></i></div>
+</header>
 <main class="container">
 {% block content %}{% endblock %}
 </main>
-<footer class="footer">Bagian Kepegawaian · Inovasi 2026</footer>
+<footer class="footer">
+  <div class="footer-rule"></div>
+  <p class="footer-unit">Sekretariat Badan Pendapatan Daerah Provinsi Kepulauan Riau</p>
+  <p class="footer-made">Dibuat oleh <b>Mahdali</b> · Tahun 2026</p>
+</footer>
 </body>
 </html>

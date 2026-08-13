@@ -1,8 +1,11 @@
 .opencode/
 .superpowers/
+.playwright-mcp/
 .env
 app.zip
+app.zip.tmp
 wsgi-pythonanywhere.py
+pa-home.yml
 __pycache__/
 *.pyc
 cuti.db
