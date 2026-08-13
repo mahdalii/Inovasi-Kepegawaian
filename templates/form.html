@@ -17,11 +17,11 @@
      <b>Kirim</b>. Tidak sampai 2 menit.</p>
   {% if errors %}<ul class="errors">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
   <form method="post" enctype="multipart/form-data">
-    <label><span class="field-num">1</span>Nama Lengkap
-      <small>Contoh: Siti Rahma</small>
+    <label><span class="field-num">1</span>Nama Lengkap sesuai SK
+      <small>Contoh: Siti Rahma, S.E.</small>
       <input name="nama" value="{{ data.nama if data }}" placeholder="Contoh: Siti Rahma" required>
     </label>
-    <label><span class="field-num">2</span>Tempat Kerja (UPTD PPD)
+    <label><span class="field-num">2</span>Tempat Kerja
       <select name="uptd" required>
         <option value="">— pilih tempat kerja —</option>
         {% for k, v in uptd_labels.items() %}

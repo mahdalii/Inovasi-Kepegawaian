@@ -25,14 +25,28 @@ CREATE TABLE IF NOT EXISTS cuti (
 
 VALID_JENIS = {"tahunan", "sakit", "alasan_penting"}
 
-VALID_UPTD = {"batam_centre", "batuaji", "tanjungpinang", "bintan", "kijang",
-              "natuna", "anambas", "karimun", "tanjungbatu", "lingga"}
+VALID_UPTD = {
+    "bidang_sekretariat", "bidang_pendapatan",
+    "bidang_pengembangan_pendapatan", "bidang_pengendalian_pengawasan",
+    "batam_centre", "batuaji", "tanjungpinang", "bintan", "kijang",
+    "natuna", "anambas", "karimun", "tanjungbatu", "lingga"
+}
 
 UPTD_LABEL = {
-    "batam_centre": "Batam Centre", "batuaji": "Batuaji",
-    "tanjungpinang": "Tanjungpinang", "bintan": "Bintan", "kijang": "Kijang",
-    "natuna": "Natuna", "anambas": "Anambas", "karimun": "Karimun",
-    "tanjungbatu": "Tanjungbatu", "lingga": "Lingga",
+    "bidang_sekretariat": "Bidang Sekretariat",
+    "bidang_pendapatan": "Bidang Pendapatan",
+    "bidang_pengembangan_pendapatan": "Bidang Pengembangan Pendapatan",
+    "bidang_pengendalian_pengawasan": "Bidang Pengendalian dan Pengawasan",
+    "batam_centre": "Batam Centre",
+    "batuaji": "Batuaji",
+    "tanjungpinang": "Tanjungpinang",
+    "bintan": "Bintan",
+    "kijang": "Kijang",
+    "natuna": "Natuna",
+    "anambas": "Anambas",
+    "karimun": "Karimun",
+    "tanjungbatu": "Tanjungbatu",
+    "lingga": "Lingga",
 }
 
 
@@ -56,9 +70,9 @@ def validate_form(nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, file_siz
     if not nama.strip():
         errors.append("Nama wajib diisi")
     if not uptd.strip():
-        errors.append("UPTD PPD wajib diisi")
+        errors.append("Tempat kerja wajib diisi")
     elif uptd not in VALID_UPTD:
-        errors.append("UPTD PPD tidak valid")
+        errors.append("Tempat kerja tidak valid")
     if jenis not in VALID_JENIS:
         errors.append("Jenis cuti tidak valid")
     if not tgl_mulai or not tgl_selesai:

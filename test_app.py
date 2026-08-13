@@ -48,7 +48,7 @@ def test_validate_form_menolak_data_tidak_lengkap():
     assert any("nama" in e.lower() for e in errors)
     assert any("jenis" in e.lower() for e in errors)
     assert any("berkas" in e.lower() for e in errors)
-    assert any("UPTD" in e for e in errors)
+    assert any("tempat" in e.lower() for e in errors)
 
 def test_validate_form_menolak_uptd_kosong_dan_valid():
     errors = validate_form("Dewi", "", "tahunan", "2026-08-13", "2026-08-14", True, True)
