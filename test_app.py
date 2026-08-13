@@ -1,5 +1,5 @@
 import sqlite3, tempfile, os, datetime
-from app import SCHEMA_SQL, init_db, is_late, can_transition, validate_form
+from app import SCHEMA_SQL, init_db, gen_nomor, save_pengajuan, is_late, can_transition, validate_form
 
 def test_init_db_membuat_tabel_cuti():
     with tempfile.TemporaryDirectory() as d:
@@ -39,3 +39,29 @@ def test_validate_form_menolak_tanggal_terbalik_dan_file_besar():
     errors = validate_form("A", "123", "tahunan", "2026-08-15", "2026-08-14", True, False)
     assert any("mulai" in e for e in errors)
     assert any("MB" in e for e in errors)
+
+def test_gen_nomor_berurutan():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript(SCHEMA_SQL)
+    assert gen_nomor(conn, datetime.date(2026, 8, 13)) == "CUT-2026-0001"
+    conn.execute(
+        "INSERT INTO cuti (nomor, nama, nip, jenis, tgl_mulai, tgl_selesai, berkas, status, catatan, tgl_masuk) "
+        "VALUES ('CUT-2026-0001','X','1','sakit','2026-08-13','2026-08-14','b.jpg','Baru','','2026-08-13')"
+    )
+    conn.commit()
+    assert gen_nomor(conn, datetime.date(2026, 8, 13)) == "CUT-2026-0002"
+    conn.close()
+
+def test_save_pengajuan_tersimpan_dan_status_baru():
+    with tempfile.TemporaryDirectory() as d:
+        db = os.path.join(d, "test.db")
+        init_db(db)
+        conn = sqlite3.connect(db)
+        conn.row_factory = sqlite3.Row
+        nomor = save_pengajuan(conn, "Budi", "12345", "sakit",
+                               "2026-08-13", "2026-08-14", "b.jpg", "2026-08-13")
+        row = conn.execute("SELECT * FROM cuti WHERE nomor=?", (nomor,)).fetchone()
+        conn.close()
+        assert row["nama"] == "Budi"
+        assert row["status"] == "Baru"

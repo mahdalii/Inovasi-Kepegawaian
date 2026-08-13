@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Ajukan Cuti{% endblock %}
+{% block content %}
+{% if success %}
+<div class="card animate-in">
+  <h2>✅ Pengajuan berhasil dikirim</h2>
+  <p>Simpan nomor pengajuan Anda:</p>
+  <p class="nomor-besar">{{ success }}</p>
+  <p>Gunakan nomor ini (atau NIP) untuk memantau status di halaman
+     <a href="{{ url_for('status') }}">Cek Status</a>.</p>
+  <a class="btn" href="{{ url_for('form_pegawai') }}">Ajukan cuti lagi</a>
+</div>
+{% else %}
+<div class="card animate-in">
+  <h2>Formulir Pengajuan Cuti</h2>
+  {% if errors %}<ul class="errors">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  <form method="post" enctype="multipart/form-data">
+    <label>Nama Lengkap <input name="nama" value="{{ data.nama if data }}" required></label>
+    <label>NIP <input name="nip" value="{{ data.nip if data }}" required></label>
+    <label>Jenis Cuti
+      <select name="jenis" id="jenis" required>
+        <option value="">— pilih jenis cuti —</option>
+        {% for k, v in jenis_labels.items() %}
+        <option value="{{ k }}">{{ v }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Tanggal Mulai Cuti <input type="date" name="tgl_mulai" required></label>
+    <label>Tanggal Selesai Cuti <input type="date" name="tgl_selesai" required></label>
+    <label id="label-berkas">Berkas Pendukung <input type="file" name="berkas" accept=".pdf,.jpg,.jpeg,.png" required></label>
+    <button class="btn btn-primary" type="submit">Kirim Pengajuan</button>
+  </form>
+  <p class="hint">Maks 5 MB · PDF / JPG / PNG</p>
+</div>
+{% endif %}
+<script>
+const labels = {
+  tahunan: "Form persetujuan atasan (PDF/JPG/PNG)",
+  sakit: "Bukti sakit (PDF/JPG/PNG)",
+  alasan_penting: "Bukti alasan penting (PDF/JPG/PNG)"
+};
+document.getElementById("jenis").addEventListener("change", (e) => {
+  document.querySelector("#label-berkas span").textContent = labels[e.target.value] || "Berkas Pendukung";
+});
+</script>
+{% endblock %}
