@@ -213,6 +213,33 @@ def create_app():
                                jenis_labels=JENIS_LABEL,
                                statuses=["Baru", "Diproses", "Disetujui", "Ditolak"])
 
+    @app.route("/staff/<int:pengajuan_id>", methods=["GET", "POST"])
+    @login_required
+    def detail(pengajuan_id):
+        conn = get_conn()
+        row = conn.execute("SELECT * FROM cuti WHERE id=?", (pengajuan_id,)).fetchone()
+        if row is None:
+            conn.close()
+            return redirect(url_for("dashboard"))
+        if request.method == "POST":
+            new_status = request.form.get("status", "")
+            if can_transition(row["status"], new_status):
+                catatan = request.form.get("catatan", "").strip()
+                conn.execute("UPDATE cuti SET status=?, catatan=? WHERE id=?",
+                             (new_status, catatan, pengajuan_id))
+                conn.commit()
+                row = conn.execute("SELECT * FROM cuti WHERE id=?", (pengajuan_id,)).fetchone()
+        conn.close()
+        allowed_targets = [s for s in STATUS_ORDER if can_transition(row["status"], s)]
+        return render_template("detail.html", row=row,
+                               jenis_labels=JENIS_LABEL,
+                               statuses=allowed_targets)
+
+    @app.route("/uploads/<path:filename>")
+    @login_required
+    def unduh_berkas(filename):
+        return send_from_directory(config.UPLOAD_FOLDER, filename)
+
     return app
 
 

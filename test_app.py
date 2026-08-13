@@ -23,6 +23,19 @@ def test_is_late_batas_tepat_2_hari():
     today = datetime.date(2026, 8, 13)
     assert is_late("Baru", "2026-08-11", today) is False
 
+def test_update_status_menolak_mundur():
+    with tempfile.TemporaryDirectory() as d:
+        db = os.path.join(d, "test.db")
+        init_db(db)
+        conn = sqlite3.connect(db)
+        conn.row_factory = sqlite3.Row
+        save_pengajuan(conn, "Budi", "123", "sakit", "2026-08-13",
+                       "2026-08-14", "b.jpg", "2026-08-13")
+        row = conn.execute("SELECT * FROM cuti LIMIT 1").fetchone()
+        assert can_transition(row["status"], "Disetujui") is True
+        assert can_transition("Disetujui", "Baru") is False
+        conn.close()
+
 def test_can_transition_hanya_maju():
     assert can_transition("Baru", "Diproses") is True
     assert can_transition("Diproses", "Disetujui") is True
