@@ -3,11 +3,13 @@
 {% block content %}
 <div class="card animate-in">
   <h2>🔍 Cek Status Pengajuan Cuti</h2>
+  <p class="hint">Ketik <b>nomor pengajuan</b> (contoh: CUT-2026-0001)
+     atau <b>nama Anda</b> di bawah ini.</p>
   <form method="post">
-    <label>Masukkan Nomor Pengajuan atau Nama Anda
-      <input name="q" value="{{ q }}" placeholder="cth: CUT-2026-0001 atau nama Anda" required>
+    <label>Nomor Pengajuan atau Nama Anda
+      <input name="q" value="{{ q }}" placeholder="CUT-2026-0001 atau nama Anda" required>
     </label>
-    <button class="btn btn-primary" type="submit">Cek Status</button>
+    <button class="btn btn-primary btn-besar" type="submit">Cek Status</button>
   </form>
 </div>
 {% if rows %}
