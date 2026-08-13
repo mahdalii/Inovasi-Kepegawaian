@@ -4,7 +4,6 @@ import datetime
 import uuid
 
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, session, flash
-import werkzeug
 
 import config
 
@@ -100,20 +99,30 @@ def gen_nomor(conn, today=None):
     return f"CUT-{year}-{row['n'] + 1:04d}"
 
 
-def save_pengajuan(conn, nama, nip, jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk):
-    nomor = gen_nomor(conn, datetime.date.fromisoformat(tgl_masuk))
-    conn.execute(
-        "INSERT INTO cuti (nomor, nama, nip, jenis, tgl_mulai, tgl_selesai, berkas, status, catatan, tgl_masuk) "
-        "VALUES (?,?,?,?,?,?,?,'Baru','',?)",
-        (nomor, nama.strip(), nip.strip(), jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk),
-    )
-    conn.commit()
-    return nomor
+def save_pengajuan(conn, nama, nip, jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk, berkas_path=None):
+    last_error = None
+    for _ in range(3):
+        nomor = gen_nomor(conn, datetime.date.fromisoformat(tgl_masuk))
+        try:
+            conn.execute(
+                "INSERT INTO cuti (nomor, nama, nip, jenis, tgl_mulai, tgl_selesai, berkas, status, catatan, tgl_masuk) "
+                "VALUES (?,?,?,?,?,?,?,'Baru','',?)",
+                (nomor, nama.strip(), nip.strip(), jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk),
+            )
+            conn.commit()
+            return nomor
+        except sqlite3.IntegrityError as e:
+            conn.rollback()
+            last_error = e
+    if berkas_path:
+        os.remove(berkas_path)
+    raise last_error
 
 
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.config["UPLOAD_FOLDER"] = config.UPLOAD_FOLDER
     init_db()
     os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
@@ -140,12 +149,14 @@ def create_app():
                                        berkas_labels=BERKAS_LABEL,
                                        data=request.form), 400
             filename = safe_filename(f.filename)
-            f.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            berkas_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            f.save(berkas_path)
             conn = get_conn()
             nomor = save_pengajuan(conn, request.form["nama"], request.form["nip"],
                                    request.form["jenis"], request.form["tgl_mulai"],
                                    request.form["tgl_selesai"], filename,
-                                   datetime.date.today().isoformat())
+                                   datetime.date.today().isoformat(),
+                                   berkas_path=berkas_path)
             conn.close()
             return render_template("form.html", success=nomor,
                                    jenis_labels=JENIS_LABEL, berkas_labels=BERKAS_LABEL)
@@ -223,17 +234,18 @@ def create_app():
             return redirect(url_for("dashboard"))
         if request.method == "POST":
             new_status = request.form.get("status", "")
+            catatan = request.form.get("catatan", "").strip()
+            conn.execute("UPDATE cuti SET catatan=? WHERE id=?", (catatan, pengajuan_id))
             if can_transition(row["status"], new_status):
-                catatan = request.form.get("catatan", "").strip()
-                conn.execute("UPDATE cuti SET status=?, catatan=? WHERE id=?",
-                             (new_status, catatan, pengajuan_id))
-                conn.commit()
-                row = conn.execute("SELECT * FROM cuti WHERE id=?", (pengajuan_id,)).fetchone()
+                conn.execute("UPDATE cuti SET status=? WHERE id=?", (new_status, pengajuan_id))
+            conn.commit()
+            row = conn.execute("SELECT * FROM cuti WHERE id=?", (pengajuan_id,)).fetchone()
         conn.close()
         allowed_targets = [s for s in STATUS_ORDER if can_transition(row["status"], s)]
+        statuses = allowed_targets if row["status"] in allowed_targets else [row["status"]] + allowed_targets
         return render_template("detail.html", row=row,
                                jenis_labels=JENIS_LABEL,
-                               statuses=allowed_targets)
+                               statuses=statuses)
 
     @app.route("/uploads/<path:filename>")
     @login_required

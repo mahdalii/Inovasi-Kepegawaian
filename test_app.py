@@ -119,3 +119,35 @@ def test_upload_kecil_diterima_dan_tersimpan():
         assert row["nama"] == "Dewi"
         assert row["status"] == "Baru"
         assert row["nomor"].startswith("CUT-")
+
+def test_catatan_tersimpan_tanpa_mengubah_status():
+    with tempfile.TemporaryDirectory() as d:
+        client = _client_di_dir(d)
+        client.post("/login", data={"password": config.STAFF_PASSWORD})
+        _post_berkas(client, "ok.jpg", 1024)
+        conn = sqlite3.connect(config.DB_PATH)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM cuti").fetchone()
+        pengajuan_id, status_awal = row["id"], row["status"]
+        conn.close()
+        r = client.post(f"/staff/{pengajuan_id}",
+                        data={"status": status_awal, "catatan": "Perlu dokumen tambahan"})
+        assert r.status_code == 200
+        conn = sqlite3.connect(config.DB_PATH)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM cuti").fetchone()
+        conn.close()
+        assert row["status"] == status_awal
+        assert row["catatan"] == "Perlu dokumen tambahan"
+
+def test_status_terminal_tetap_ada_di_dropdown_detail():
+    with tempfile.TemporaryDirectory() as d:
+        client = _client_di_dir(d)
+        client.post("/login", data={"password": config.STAFF_PASSWORD})
+        _post_berkas(client, "ok.jpg", 1024)
+        conn = sqlite3.connect(config.DB_PATH)
+        conn.execute("UPDATE cuti SET status='Disetujui'")
+        conn.commit()
+        conn.close()
+        r = client.get("/staff/1")
+        assert "Disetujui" in r.get_data(as_text=True)
