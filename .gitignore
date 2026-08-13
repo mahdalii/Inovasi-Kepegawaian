@@ -1,4 +1,5 @@
 .opencode/
+.superpowers/
 __pycache__/
 *.pyc
 cuti.db
