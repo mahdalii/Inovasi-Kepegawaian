@@ -35,7 +35,7 @@ pytest test_app.py -v
 
 ## Cara Pakai Ringkas
 
-- Pegawai → halaman utama: isi form, dapat nomor `CUT-2026-XXXX`.
-- Pegawai → "Cek Status": masukkan NIP.
-- Staff → /login → dashboard: baris merah = pengajuan > 2 hari belum selesai.
+- Pegawai → halaman utama: isi form (nama + UPTD PPD + jenis cuti), dapat nomor `CUT-2026-XXXX`.
+- Pegawai → "Cek Status": masukkan nomor pengajuan atau nama.
+- Staff → /login → dashboard: filter UPTD & status, cari nama/nomor, baris merah = pengajuan > 2 hari belum selesai.
 - Staff → detail: unduh berkas, ubah status, tulis catatan.

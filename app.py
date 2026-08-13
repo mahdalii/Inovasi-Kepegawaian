@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS cuti (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nomor TEXT NOT NULL UNIQUE,
     nama TEXT NOT NULL,
-    nip TEXT NOT NULL,
+    uptd TEXT NOT NULL,
     jenis TEXT NOT NULL,
     tgl_mulai TEXT NOT NULL,
     tgl_selesai TEXT NOT NULL,
@@ -24,6 +24,16 @@ CREATE TABLE IF NOT EXISTS cuti (
 """
 
 VALID_JENIS = {"tahunan", "sakit", "alasan_penting"}
+
+VALID_UPTD = {"batam_centre", "batuaji", "tanjungpinang", "bintan", "kijang",
+              "natuna", "anambas", "karimun", "tanjungbatu", "lingga"}
+
+UPTD_LABEL = {
+    "batam_centre": "Batam Centre", "batuaji": "Batuaji",
+    "tanjungpinang": "Tanjungpinang", "bintan": "Bintan", "kijang": "Kijang",
+    "natuna": "Natuna", "anambas": "Anambas", "karimun": "Karimun",
+    "tanjungbatu": "Tanjungbatu", "lingga": "Lingga",
+}
 
 
 def is_late(status, tgl_masuk, today=None):
@@ -41,12 +51,14 @@ def can_transition(current, new):
     return STATUS_ORDER.get(new, 0) > STATUS_ORDER.get(current, 99)
 
 
-def validate_form(nama, nip, jenis, tgl_mulai, tgl_selesai, berkas_ok, file_size_ok):
+def validate_form(nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, file_size_ok):
     errors = []
     if not nama.strip():
         errors.append("Nama wajib diisi")
-    if not nip.strip():
-        errors.append("NIP wajib diisi")
+    if not uptd.strip():
+        errors.append("UPTD PPD wajib diisi")
+    elif uptd not in VALID_UPTD:
+        errors.append("UPTD PPD tidak valid")
     if jenis not in VALID_JENIS:
         errors.append("Jenis cuti tidak valid")
     if not tgl_mulai or not tgl_selesai:
@@ -99,15 +111,15 @@ def gen_nomor(conn, today=None):
     return f"CUT-{year}-{row['n'] + 1:04d}"
 
 
-def save_pengajuan(conn, nama, nip, jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk, berkas_path=None):
+def save_pengajuan(conn, nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk, berkas_path=None):
     last_error = None
     for _ in range(3):
         nomor = gen_nomor(conn, datetime.date.fromisoformat(tgl_masuk))
         try:
             conn.execute(
-                "INSERT INTO cuti (nomor, nama, nip, jenis, tgl_mulai, tgl_selesai, berkas, status, catatan, tgl_masuk) "
+                "INSERT INTO cuti (nomor, nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas, status, catatan, tgl_masuk) "
                 "VALUES (?,?,?,?,?,?,?,'Baru','',?)",
-                (nomor, nama.strip(), nip.strip(), jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk),
+                (nomor, nama.strip(), uptd.strip(), jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk),
             )
             conn.commit()
             return nomor
@@ -139,7 +151,7 @@ def create_app():
                 f.stream.seek(0)
             size_ok = size is not None and size <= config.MAX_UPLOAD_MB * 1024 * 1024
             errors = validate_form(
-                request.form.get("nama", ""), request.form.get("nip", ""),
+                request.form.get("nama", ""), request.form.get("uptd", ""),
                 request.form.get("jenis", ""), request.form.get("tgl_mulai", ""),
                 request.form.get("tgl_selesai", ""), berkas_ok, size_ok,
             )
@@ -147,34 +159,37 @@ def create_app():
                 return render_template("form.html", errors=errors,
                                        jenis_labels=JENIS_LABEL,
                                        berkas_labels=BERKAS_LABEL,
+                                       uptd_labels=UPTD_LABEL,
                                        data=request.form), 400
             filename = safe_filename(f.filename)
             berkas_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             f.save(berkas_path)
             conn = get_conn()
-            nomor = save_pengajuan(conn, request.form["nama"], request.form["nip"],
+            nomor = save_pengajuan(conn, request.form["nama"], request.form["uptd"],
                                    request.form["jenis"], request.form["tgl_mulai"],
                                    request.form["tgl_selesai"], filename,
                                    datetime.date.today().isoformat(),
                                    berkas_path=berkas_path)
             conn.close()
             return render_template("form.html", success=nomor,
-                                   jenis_labels=JENIS_LABEL, berkas_labels=BERKAS_LABEL)
+                                   jenis_labels=JENIS_LABEL, berkas_labels=BERKAS_LABEL,
+                                   uptd_labels=UPTD_LABEL)
         return render_template("form.html", jenis_labels=JENIS_LABEL,
-                               berkas_labels=BERKAS_LABEL)
+                               berkas_labels=BERKAS_LABEL, uptd_labels=UPTD_LABEL)
 
     @app.route("/status", methods=["GET", "POST"])
     def status():
-        rows, nip = [], request.form.get("nip", "")
+        rows, q = [], request.form.get("q", "")
         if request.method == "POST":
             conn = get_conn()
             rows = conn.execute(
-                "SELECT * FROM cuti WHERE nip=? ORDER BY tgl_masuk DESC, id DESC",
-                (nip.strip(),),
+                "SELECT * FROM cuti WHERE nomor LIKE ? OR nama LIKE ? "
+                "ORDER BY tgl_masuk DESC, id DESC",
+                (f"%{q.strip()}%", f"%{q.strip()}%"),
             ).fetchall()
             conn.close()
-        return render_template("status.html", rows=rows, nip=nip,
-                               jenis_labels=JENIS_LABEL)
+        return render_template("status.html", rows=rows, q=q,
+                               jenis_labels=JENIS_LABEL, uptd_labels=UPTD_LABEL)
 
     from functools import wraps
 
@@ -206,22 +221,27 @@ def create_app():
         conn = get_conn()
         q = request.args.get("q", "").strip()
         fstatus = request.args.get("status", "").strip()
+        f_uptd = request.args.get("uptd", "").strip()
         sql = "SELECT * FROM cuti WHERE 1=1"
         params = []
         if q:
-            sql += " AND (nama LIKE ? OR nip LIKE ? OR nomor LIKE ?)"
-            params += [f"%{q}%"] * 3
+            sql += " AND (nama LIKE ? OR nomor LIKE ?)"
+            params += [f"%{q}%"] * 2
         if fstatus:
             sql += " AND status=?"
             params.append(fstatus)
+        if f_uptd:
+            sql += " AND uptd=?"
+            params.append(f_uptd)
         sql += " ORDER BY tgl_masuk DESC, id DESC"
         rows = conn.execute(sql, params).fetchall()
         conn.close()
         today = datetime.date.today()
         late_ids = {r["id"] for r in rows if is_late(r["status"], r["tgl_masuk"], today)}
         return render_template("dashboard.html", rows=rows, late_ids=late_ids,
-                               q=q, filter_status=fstatus,
-                               jenis_labels=JENIS_LABEL,
+                               q=q, filter_status=fstatus, filter_uptd=f_uptd,
+                               jenis_labels=JENIS_LABEL, uptd_labels=UPTD_LABEL,
+                               uptds=VALID_UPTD,
                                statuses=["Baru", "Diproses", "Disetujui", "Ditolak"])
 
     @app.route("/staff/<int:pengajuan_id>", methods=["GET", "POST"])
@@ -244,7 +264,7 @@ def create_app():
         allowed_targets = [s for s in STATUS_ORDER if can_transition(row["status"], s)]
         statuses = allowed_targets if row["status"] in allowed_targets else [row["status"]] + allowed_targets
         return render_template("detail.html", row=row,
-                               jenis_labels=JENIS_LABEL,
+                               jenis_labels=JENIS_LABEL, uptd_labels=UPTD_LABEL,
                                statuses=statuses)
 
     @app.route("/uploads/<path:filename>")

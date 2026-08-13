@@ -6,7 +6,7 @@
   <h2>✅ Pengajuan berhasil dikirim</h2>
   <p>Simpan nomor pengajuan Anda:</p>
   <p class="nomor-besar">{{ success }}</p>
-  <p>Gunakan nomor ini (atau NIP) untuk memantau status di halaman
+  <p>Gunakan nomor ini (atau nama) untuk memantau status di halaman
      <a href="{{ url_for('status') }}">Cek Status</a>.</p>
   <a class="btn" href="{{ url_for('form_pegawai') }}">Ajukan cuti lagi</a>
 </div>
@@ -16,12 +16,19 @@
   {% if errors %}<ul class="errors">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
   <form method="post" enctype="multipart/form-data">
     <label>Nama Lengkap <input name="nama" value="{{ data.nama if data }}" required></label>
-    <label>NIP <input name="nip" value="{{ data.nip if data }}" required></label>
+    <label>UPTD PPD
+      <select name="uptd" required>
+        <option value="">— pilih UPTD —</option>
+        {% for k, v in uptd_labels.items() %}
+        <option value="{{ k }}" {% if data and data.uptd == k %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </label>
     <label>Jenis Cuti
       <select name="jenis" id="jenis" required>
         <option value="">— pilih jenis cuti —</option>
         {% for k, v in jenis_labels.items() %}
-        <option value="{{ k }}">{{ v }}</option>
+        <option value="{{ k }}" {% if data and data.jenis == k %}selected{% endif %}>{{ v }}</option>
         {% endfor %}
       </select>
     </label>
