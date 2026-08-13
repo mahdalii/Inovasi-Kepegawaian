@@ -179,13 +179,14 @@ def create_app():
 
     @app.route("/status", methods=["GET", "POST"])
     def status():
-        rows, q = [], request.form.get("q", "")
-        if request.method == "POST":
+        q = request.form.get("q", "").strip()
+        rows = []
+        if request.method == "POST" and q:
             conn = get_conn()
             rows = conn.execute(
                 "SELECT * FROM cuti WHERE nomor LIKE ? OR nama LIKE ? "
                 "ORDER BY tgl_masuk DESC, id DESC",
-                (f"%{q.strip()}%", f"%{q.strip()}%"),
+                (f"%{q}%", f"%{q}%"),
             ).fetchall()
             conn.close()
         return render_template("status.html", rows=rows, q=q,
@@ -241,7 +242,7 @@ def create_app():
         return render_template("dashboard.html", rows=rows, late_ids=late_ids,
                                q=q, filter_status=fstatus, filter_uptd=f_uptd,
                                jenis_labels=JENIS_LABEL, uptd_labels=UPTD_LABEL,
-                               uptds=VALID_UPTD,
+                               uptds=list(UPTD_LABEL),
                                statuses=["Baru", "Diproses", "Disetujui", "Ditolak"])
 
     @app.route("/staff/<int:pengajuan_id>", methods=["GET", "POST"])

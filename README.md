@@ -27,6 +27,10 @@ python app.py
 
 Salin 2 hal: file `cuti.db` dan folder `uploads/`.
 
+Catatan pembaruan: bila menjalankan versi baru ini di atas instalasi lama,
+hapus `cuti.db` sekali (struktur database berubah — NIP diganti UPTD PPD,
+tidak ada mekanisme migrasi otomatis).
+
 ## Pengujian
 
 ```
