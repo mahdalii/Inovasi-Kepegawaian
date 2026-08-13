@@ -1,5 +1,8 @@
 .opencode/
 .superpowers/
+.env
+app.zip
+wsgi-pythonanywhere.py
 __pycache__/
 *.pyc
 cuti.db
