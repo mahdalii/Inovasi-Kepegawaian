@@ -39,14 +39,17 @@ Status: `Baru → Diproses → Disetujui` atau `Baru → Diproses → Ditolak` (
 
 ## 3. Halaman Aplikasi
 
-1. **Form Pegawai** — Nama, NIP, jenis cuti (tahunan/sakit/alasan penting),
-   tanggal mulai–selesai, upload berkas (label menyesuaikan jenis cuti), kirim.
-   Setelah kirim tampil nomor pengajuan.
-2. **Cek Status Pegawai** — input NIP, tampilkan semua pengajuan + statusnya.
-3. **Dashboard Staff** — tabel semua pengajuan: NIP, nama, jenis, tanggal cuti,
-   tanggal masuk, umur pengajuan, status. Pengajuan yang masih `Baru`/`Diproses`
-   lebih dari 2 hari disorot merah + muncul di daftar "Perlu Perhatian". Ada
-   pencarian & filter.
+1. **Form Pegawai** — Nama, UPTD PPD (batam centre / batuaji / tanjungpinang /
+   bintan / kijang / natuna / anambas / karimun / tanjungbatu / lingga), jenis
+   cuti (tahunan/sakit/alasan penting), tanggal mulai–selesai, upload berkas
+   (label menyesuaikan jenis cuti), kirim. Setelah kirim tampil nomor
+   pengajuan. **Tidak ada NIP** (privacy: menghindari data NIP tersebar).
+2. **Cek Status Pegawai** — input nomor pengajuan ATAU nama (satu kolom
+   pencarian), tampilkan pengajuan yang cocok + statusnya.
+3. **Dashboard Staff** — tabel semua pengajuan: nomor, nama, UPTD, jenis,
+   tanggal cuti, tanggal masuk, umur pengajuan, status. Pengajuan yang masih
+   `Baru`/`Diproses` lebih dari 2 hari disorot merah + muncul di daftar
+   "Perlu Perhatian". Ada pencarian (nomor/nama) & filter (UPTD, status).
 4. **Detail Pengajuan** — unduh berkas, ubah status, tulis catatan.
 
 ## 4. Aturan Logika
@@ -55,7 +58,7 @@ Status: `Baru → Diproses → Disetujui` atau `Baru → Diproses → Ditolak` (
   `Baru` atau `Diproses` (belum sampai Disetujui/Ditolak).
   (Catatan: memakai hari kalender untuk kesederhanaan; disesuaikan di revisi
   jika kantor minta hari kerja.)
-- NIP dianggap unik per pegawai; satu pegawai boleh punya banyak pengajuan.
+- NIP TIDAK dipakai (privacy); identitas pegawai = nama + UPTD PPD.
 - Status hanya bisa bergerak maju: Baru → Diproses → Disetujui / Ditolak.
 
 ## 5. Teknologi
@@ -95,3 +98,11 @@ Status: `Baru → Diproses → Disetujui` atau `Baru → Diproses → Ditolak` (
 - Autentikasi pegawai (cukup NIP)
 - Integrasi WhatsApp
 - Dashboard statistik lengkap (cukup filter & pencarian)
+
+## 11. Perubahan 13-08-2026 (Permintaan Pengguna)
+
+- NIP dihapus seluruhnya karena khawatir data tersebar (privacy).
+- Form pegawai: Nama + UPTD PPD (10 lokasi: batam centre, batuaji, tanjungpinang, bintan, kijang, natuna, anambas, karimun, tanjungbatu, lingga) + jenis cuti + tanggal + berkas.
+- Cek status: satu kolom pencarian (nomor pengajuan ATAU nama).
+- Dashboard: pencarian nomor/nama, filter UPTD + status.
+- Database: kolom nip diganti uptd.

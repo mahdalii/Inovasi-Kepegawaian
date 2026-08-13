@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Detail {{ row.nomor }}{% endblock %}
+{% block content %}
+<div class="card animate-in">
+  <div class="row-between">
+    <h2>{{ row.nomor }} — {{ row.nama }}</h2>
+    <a class="btn" href="{{ url_for('dashboard') }}">← Kembali</a>
+  </div>
+  <table class="table table-detail">
+    <tr><th>Nama</th><td>{{ row.nama }}</td></tr>
+    <tr><th>UPTD PPD</th><td>{{ uptd_labels[row.uptd] }}</td></tr>
+    <tr><th>Jenis Cuti</th><td>{{ jenis_labels[row.jenis] }}</td></tr>
+    <tr><th>Tanggal Cuti</th><td>{{ row.tgl_mulai }} s/d {{ row.tgl_selesai }}</td></tr>
+    <tr><th>Tanggal Masuk</th><td>{{ row.tgl_masuk }}</td></tr>
+    <tr><th>Status</th><td><span class="badge badge-{{ row.status|lower }} status-badge" data-status="{{ row.status|lower }}">{{ row.status }}</span></td></tr>
+    <tr><th>Berkas</th><td><a class="btn" href="{{ url_for('unduh_berkas', filename=row.berkas) }}" target="_blank">⬇ Unduh Berkas</a></td></tr>
+  </table>
+
+  <form method="post" class="status-form">
+    <label>Ubah Status
+      <select name="status">
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if s == row.status %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Catatan
+      <textarea name="catatan" rows="3">{{ row.catatan }}</textarea>
+    </label>
+    <button class="btn btn-primary" type="submit">Simpan</button>
+  </form>
+</div>
+{% endblock %}
