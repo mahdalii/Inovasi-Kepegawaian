@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Login Staff{% endblock %}
+{% block content %}
+<div class="card narrow animate-in">
+  <h2>🔐 Panel Kepegawaian</h2>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<p class="errors">{{ msg }}</p>{% endfor %}
+  {% endwith %}
+  <form method="post">
+    <label>Kata Sandi <input type="password" name="password" required></label>
+    <button class="btn btn-primary" type="submit">Masuk</button>
+  </form>
+</div>
+{% endblock %}

@@ -165,6 +165,54 @@ def create_app():
         return render_template("status.html", rows=rows, nip=nip,
                                jenis_labels=JENIS_LABEL)
 
+    from functools import wraps
+
+    def login_required(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if not session.get("staff"):
+                return redirect(url_for("login"))
+            return view(*args, **kwargs)
+        return wrapped
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if request.method == "POST":
+            if request.form.get("password") == config.STAFF_PASSWORD:
+                session["staff"] = True
+                return redirect(url_for("dashboard"))
+            flash("Kata sandi salah", "error")
+        return render_template("login.html")
+
+    @app.route("/logout")
+    def logout():
+        session.pop("staff", None)
+        return redirect(url_for("login"))
+
+    @app.route("/staff")
+    @login_required
+    def dashboard():
+        conn = get_conn()
+        q = request.args.get("q", "").strip()
+        fstatus = request.args.get("status", "").strip()
+        sql = "SELECT * FROM cuti WHERE 1=1"
+        params = []
+        if q:
+            sql += " AND (nama LIKE ? OR nip LIKE ? OR nomor LIKE ?)"
+            params += [f"%{q}%"] * 3
+        if fstatus:
+            sql += " AND status=?"
+            params.append(fstatus)
+        sql += " ORDER BY tgl_masuk DESC, id DESC"
+        rows = conn.execute(sql, params).fetchall()
+        conn.close()
+        today = datetime.date.today()
+        late_ids = {r["id"] for r in rows if is_late(r["status"], r["tgl_masuk"], today)}
+        return render_template("dashboard.html", rows=rows, late_ids=late_ids,
+                               q=q, filter_status=fstatus,
+                               jenis_labels=JENIS_LABEL,
+                               statuses=["Baru", "Diproses", "Disetujui", "Ditolak"])
+
     return app
 
 
