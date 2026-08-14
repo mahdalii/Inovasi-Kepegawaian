@@ -17,7 +17,7 @@
      <b>Kirim</b>. Tidak sampai 2 menit.</p>
   {% if errors %}<ul class="errors">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
   <form method="post" enctype="multipart/form-data">
-    <label><span class="field-num">1</span>Nama Lengkap sesuai SK
+    <label><span class="field-num">1</span>Nama Lengkap beserta Gelar
       <small>Contoh: Siti Rahma, S.E.</small>
       <input name="nama" value="{{ data.nama if data }}" placeholder="Contoh: Siti Rahma" required>
     </label>

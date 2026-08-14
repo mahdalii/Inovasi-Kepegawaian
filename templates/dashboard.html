@@ -1,7 +1,30 @@
 {% extends "base.html" %}
 {% block title %}Dashboard Cuti{% endblock %}
 {% block content %}
-<div class="card animate-in">
+<div class="stat-grid animate-in">
+  <div class="stat-card stat-total">
+    <div class="stat-label">Total Pengajuan</div>
+    <div class="stat-value">{{ rows|length }}</div>
+  </div>
+  <div class="stat-card stat-baru">
+    <div class="stat-label">Baru</div>
+    <div class="stat-value">{{ (rows | selectattr('status', 'equalto', 'Baru') | list)|length }}</div>
+  </div>
+  <div class="stat-card stat-diproses">
+    <div class="stat-label">Diproses</div>
+    <div class="stat-value">{{ (rows | selectattr('status', 'equalto', 'Diproses') | list)|length }}</div>
+  </div>
+  <div class="stat-card stat-disetujui">
+    <div class="stat-label">Disetujui</div>
+    <div class="stat-value">{{ (rows | selectattr('status', 'equalto', 'Disetujui') | list)|length }}</div>
+  </div>
+  <div class="stat-card stat-ditolak">
+    <div class="stat-label">Ditolak</div>
+    <div class="stat-value">{{ (rows | selectattr('status', 'equalto', 'Ditolak') | list)|length }}</div>
+  </div>
+</div>
+
+<div class="card animate-in delay-1">
   <div class="row-between">
     <h2>Antrian Pengajuan Cuti</h2>
     <a class="btn" href="{{ url_for('logout') }}">Keluar</a>
