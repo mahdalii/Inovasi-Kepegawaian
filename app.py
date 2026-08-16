@@ -1,27 +1,13 @@
+import io
+import mimetypes
 import os
-import sqlite3
 import datetime
 import uuid
 
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+from supabase import create_client
 
 import config
-
-SCHEMA_SQL = """
-CREATE TABLE IF NOT EXISTS cuti (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nomor TEXT NOT NULL UNIQUE,
-    nama TEXT NOT NULL,
-    uptd TEXT NOT NULL,
-    jenis TEXT NOT NULL,
-    tgl_mulai TEXT NOT NULL,
-    tgl_selesai TEXT NOT NULL,
-    berkas TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'Baru',
-    catatan TEXT DEFAULT '',
-    tgl_masuk TEXT NOT NULL
-);
-"""
 
 VALID_JENIS = {"tahunan", "sakit", "alasan_penting"}
 
@@ -82,21 +68,8 @@ def validate_form(nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, file_siz
     if not berkas_ok:
         errors.append("Berkas wajib diupload (PDF/JPG/PNG)")
     if not file_size_ok:
-        errors.append("Ukuran berkas melebihi 5 MB")
+        errors.append(f"Ukuran berkas melebihi {config.MAX_UPLOAD_MB} MB")
     return errors
-
-
-def get_conn(db_path=None):
-    conn = sqlite3.connect(db_path or config.DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db(db_path=None):
-    conn = get_conn(db_path)
-    conn.executescript(SCHEMA_SQL)
-    conn.commit()
-    conn.close()
 
 
 JENIS_LABEL = {"tahunan": "Cuti Tahunan", "sakit": "Cuti Sakit",
@@ -116,42 +89,54 @@ def safe_filename(original):
     return f"{uuid.uuid4().hex}.{ext}"
 
 
-def gen_nomor(conn, today=None):
-    today = today or datetime.date.today()
-    year = today.strftime("%Y")
-    row = conn.execute(
-        "SELECT COUNT(*) AS n FROM cuti WHERE nomor LIKE ?", (f"CUT-{year}-%",)
-    ).fetchone()
-    return f"CUT-{year}-{row['n'] + 1:04d}"
+_client = None
 
 
-def save_pengajuan(conn, nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk, berkas_path=None):
-    last_error = None
+def get_client():
+    global _client
+    if _client is None:
+        _client = create_client(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY)
+    return _client
+
+
+def format_nomor(tahun, nilai):
+    return f"CUT-{tahun}-{nilai:04d}"
+
+
+def get_nomor_value(sb, tahun):
+    row = sb.table("counter").select("*").eq("tahun", tahun).execute().data
+    if row:
+        nilai = row[0]["nilai"] + 1
+        sb.table("counter").update({"nilai": nilai}).eq("tahun", tahun).execute()
+    else:
+        nilai = 1
+        sb.table("counter").insert({"tahun": tahun, "nilai": nilai}).execute()
+    return nilai
+# ponytail: counter satu baris per tahun, lock lewat insert/update.
+# Konkurensi tinggi bisa lompat nomor — upgrade ke sequence postgres kalau perlu.
+
+
+def save_pengajuan(sb, nama, uptd, jenis, tgl_mulai, tgl_selesai, filename, tgl_masuk):
+    tahun = tgl_masuk[:4]
     for _ in range(3):
-        nomor = gen_nomor(conn, datetime.date.fromisoformat(tgl_masuk))
+        nilai = get_nomor_value(sb, tahun)
+        nomor = format_nomor(tahun, nilai)
         try:
-            conn.execute(
-                "INSERT INTO cuti (nomor, nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas, status, catatan, tgl_masuk) "
-                "VALUES (?,?,?,?,?,?,?,'Baru','',?)",
-                (nomor, nama.strip(), uptd.strip(), jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk),
-            )
-            conn.commit()
+            sb.table("cuti").insert({
+                "nomor": nomor, "nama": nama.strip(), "uptd": uptd.strip(),
+                "jenis": jenis, "tgl_mulai": tgl_mulai, "tgl_selesai": tgl_selesai,
+                "berkas": filename, "status": "Baru", "catatan": "", "tgl_masuk": tgl_masuk,
+            }).execute()
             return nomor
-        except sqlite3.IntegrityError as e:
-            conn.rollback()
-            last_error = e
-    if berkas_path:
-        os.remove(berkas_path)
-    raise last_error
+        except Exception:
+            continue
+    raise RuntimeError("Gagal menyimpan pengajuan")
 
 
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    app.config["UPLOAD_FOLDER"] = config.UPLOAD_FOLDER
-    init_db()
-    os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
 
     @app.route("/", methods=["GET", "POST"])
     def form_pegawai():
@@ -175,16 +160,27 @@ def create_app():
                                        berkas_labels=BERKAS_LABEL,
                                        uptd_labels=UPTD_LABEL,
                                        data=request.form), 400
+            data = f.read()
             filename = safe_filename(f.filename)
-            berkas_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            f.save(berkas_path)
-            conn = get_conn()
-            nomor = save_pengajuan(conn, request.form["nama"], request.form["uptd"],
-                                   request.form["jenis"], request.form["tgl_mulai"],
-                                   request.form["tgl_selesai"], filename,
-                                   datetime.date.today().isoformat(),
-                                   berkas_path=berkas_path)
-            conn.close()
+            try:
+                get_client().storage.from_(config.STORAGE_BUCKET).upload(filename, data)
+            except Exception:
+                errors = ["Gagal mengunggah berkas. Coba file lebih kecil (maks 4MB) atau coba lagi."]
+                return render_template("form.html", errors=errors,
+                                       jenis_labels=JENIS_LABEL, berkas_labels=BERKAS_LABEL,
+                                       uptd_labels=UPTD_LABEL, data=request.form), 400
+            try:
+                nomor = save_pengajuan(get_client(),
+                                       request.form["nama"], request.form["uptd"],
+                                       request.form["jenis"], request.form["tgl_mulai"],
+                                       request.form["tgl_selesai"], filename,
+                                       datetime.date.today().isoformat())
+            except Exception:
+                get_client().storage.from_(config.STORAGE_BUCKET).remove([filename])
+                errors = ["Gagal menyimpan pengajuan. Silakan coba lagi."]
+                return render_template("form.html", errors=errors,
+                                       jenis_labels=JENIS_LABEL, berkas_labels=BERKAS_LABEL,
+                                       uptd_labels=UPTD_LABEL, data=request.form), 500
             return render_template("form.html", success=nomor,
                                    jenis_labels=JENIS_LABEL, berkas_labels=BERKAS_LABEL,
                                    uptd_labels=UPTD_LABEL)
@@ -196,13 +192,10 @@ def create_app():
         q = request.form.get("q", "").strip()
         rows = []
         if request.method == "POST" and q:
-            conn = get_conn()
-            rows = conn.execute(
-                "SELECT * FROM cuti WHERE nomor LIKE ? OR nama LIKE ? "
-                "ORDER BY tgl_masuk DESC, id DESC",
-                (f"%{q}%", f"%{q}%"),
-            ).fetchall()
-            conn.close()
+            rows = get_client().table("cuti").select("*") \
+                .or_(f"nomor.ilike.*{q}*,nama.ilike.*{q}*") \
+                .order("tgl_masuk", desc=True).order("id", desc=True) \
+                .execute().data
         return render_template("status.html", rows=rows, q=q,
                                jenis_labels=JENIS_LABEL, uptd_labels=UPTD_LABEL)
 
@@ -233,24 +226,18 @@ def create_app():
     @app.route("/staff")
     @login_required
     def dashboard():
-        conn = get_conn()
         q = request.args.get("q", "").strip()
         fstatus = request.args.get("status", "").strip()
         f_uptd = request.args.get("uptd", "").strip()
-        sql = "SELECT * FROM cuti WHERE 1=1"
-        params = []
+        b = get_client().table("cuti").select("*")
         if q:
-            sql += " AND (nama LIKE ? OR nomor LIKE ?)"
-            params += [f"%{q}%"] * 2
+            b = b.or_(f"nomor.ilike.*{q}*,nama.ilike.*{q}*")
         if fstatus:
-            sql += " AND status=?"
-            params.append(fstatus)
+            b = b.eq("status", fstatus)
         if f_uptd:
-            sql += " AND uptd=?"
-            params.append(f_uptd)
-        sql += " ORDER BY tgl_masuk DESC, id DESC"
-        rows = conn.execute(sql, params).fetchall()
-        conn.close()
+            b = b.eq("uptd", f_uptd)
+        b = b.order("tgl_masuk", desc=True).order("id", desc=True)
+        rows = b.execute().data
         today = datetime.date.today()
         late_ids = {r["id"] for r in rows if is_late(r["status"], r["tgl_masuk"], today)}
         return render_template("dashboard.html", rows=rows, late_ids=late_ids,
@@ -262,20 +249,20 @@ def create_app():
     @app.route("/staff/<int:pengajuan_id>", methods=["GET", "POST"])
     @login_required
     def detail(pengajuan_id):
-        conn = get_conn()
-        row = conn.execute("SELECT * FROM cuti WHERE id=?", (pengajuan_id,)).fetchone()
-        if row is None:
-            conn.close()
+        sb = get_client()
+        data = sb.table("cuti").select("*").eq("id", pengajuan_id).execute().data
+        if not data:
             return redirect(url_for("dashboard"))
+        row = data[0]
         if request.method == "POST":
             new_status = request.form.get("status", "")
             catatan = request.form.get("catatan", "").strip()
-            conn.execute("UPDATE cuti SET catatan=? WHERE id=?", (catatan, pengajuan_id))
+            upd = {"catatan": catatan}
             if can_transition(row["status"], new_status):
-                conn.execute("UPDATE cuti SET status=? WHERE id=?", (new_status, pengajuan_id))
-            conn.commit()
-            row = conn.execute("SELECT * FROM cuti WHERE id=?", (pengajuan_id,)).fetchone()
-        conn.close()
+                upd["status"] = new_status
+            sb.table("cuti").update(upd).eq("id", pengajuan_id).execute()
+            data = sb.table("cuti").select("*").eq("id", pengajuan_id).execute().data
+            row = data[0]
         allowed_targets = [s for s in STATUS_ORDER if can_transition(row["status"], s)]
         statuses = allowed_targets if row["status"] in allowed_targets else [row["status"]] + allowed_targets
         return render_template("detail.html", row=row,
@@ -285,7 +272,9 @@ def create_app():
     @app.route("/uploads/<path:filename>")
     @login_required
     def unduh_berkas(filename):
-        return send_from_directory(config.UPLOAD_FOLDER, filename)
+        data = get_client().storage.from_(config.STORAGE_BUCKET).download(filename)
+        return send_file(io.BytesIO(data), as_attachment=True, download_name=filename,
+                         mimetype=mimetypes.guess_type(filename)[0] or "application/octet-stream")
 
     return app
 
