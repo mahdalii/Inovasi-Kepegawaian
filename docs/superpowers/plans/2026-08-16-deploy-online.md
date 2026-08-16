@@ -26,7 +26,7 @@
 **Files:** tidak ada (langsung ke Supabase project via MCP)
 
 **Interfaces:**
-- Produces: tabel `cuti` (kolom: id bigint identity PK, nomor text unique, nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas, status default 'Baru', catatan default '', tgl_masuk), tabel `counter` (id int PK, tahun text, nilai int), bucket storage `berkas` (privat).
+- Produces: tabel `cuti` (kolom: id bigint identity PK, nomor text unique, nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas, status default 'Baru', catatan default '', tgl_masuk), tabel `counter` (tahun text PK, nilai int), bucket storage `berkas` (privat).
 
 - [ ] **Step 1: Terapkan migrasi DDL**
 
@@ -48,8 +48,7 @@ create table if not exists cuti (
 );
 
 create table if not exists counter (
-  id integer primary key,
-  tahun text not null,
+  tahun text primary key,
   nilai integer not null
 );
 ```
@@ -180,7 +179,7 @@ def get_nomor_value(sb, tahun):
         sb.table("counter").update({"nilai": nilai}).eq("tahun", tahun).execute()
     else:
         nilai = 1
-        sb.table("counter").insert({"id": 1, "tahun": tahun, "nilai": nilai}).execute()
+        sb.table("counter").insert({"tahun": tahun, "nilai": nilai}).execute()
     return nilai
 # ponytail: counter satu baris per tahun, lock lewat insert/update.
 # Konkurensi tinggi bisa lompat nomor — upgrade ke sequence postgres kalau perlu.
@@ -245,7 +244,7 @@ Ganti blok query `sqlite`:
 
 ```python
             rows = get_client().table("cuti").select("*") \
-                .or_(f"nomor.ilike.%{q}%,nama.ilike.%{q}%") \
+                .or_(f"nomor.ilike.*{q}*,nama.ilike.*{q}*") \
                 .order("tgl_masuk", desc=True).order("id", desc=True) \
                 .execute().data
 ```
@@ -259,7 +258,7 @@ Ganti query:
 ```python
         b = get_client().table("cuti").select("*")
         if q:
-            b = b.or_(f"nomor.ilike.%{q}%,nama.ilike.%{q}%")
+            b = b.or_(f"nomor.ilike.*{q}*,nama.ilike.*{q}*")
         if fstatus:
             b = b.eq("status", fstatus)
         if f_uptd:
