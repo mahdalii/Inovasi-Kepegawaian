@@ -44,9 +44,10 @@
       <input type="date" name="tgl_selesai" required>
     </label>
     <label id="label-berkas"><span class="field-num">6</span><span id="label-berkas-text">Berkas Pendukung</span>
-      <input type="file" name="berkas" accept=".pdf,.jpg,.jpeg,.png" required>
+      <input type="file" name="berkas" id="berkas-input" accept=".pdf,.jpg,.jpeg,.png" required>
+      <span class="berkas-box" id="berkas-box">Ketuk untuk pilih berkas (PDF/JPG/PNG)</span>
     </label>
-    <p class="hint" id="hint-berkas">Boleh foto dari HP. Maksimal 5 MB.</p>
+    <p class="hint" id="hint-berkas">Boleh foto dari HP. Maksimal 4 MB.</p>
     <button class="btn btn-primary btn-besar" type="submit">Kirim</button>
   </form>
 </div>
@@ -67,6 +68,14 @@ select.addEventListener("change", (e) => {
   if (labels[e.target.value]) {
     document.getElementById("label-berkas-text").textContent = labels[e.target.value];
     document.getElementById("hint-berkas").textContent = hints[e.target.value];
+  }
+});
+const berkasInput = document.getElementById("berkas-input");
+const berkasBox = document.getElementById("berkas-box");
+berkasInput.addEventListener("change", () => {
+  if (berkasInput.files.length) {
+    berkasBox.textContent = "✓ " + berkasInput.files[0].name;
+    berkasBox.classList.add("ada");
   }
 });
 </script>

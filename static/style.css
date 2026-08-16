@@ -51,6 +51,17 @@ input, select, textarea {
   font-size: 1rem;
 }
 input:focus { outline: none; border-color: var(--pine); box-shadow: 0 0 0 2px rgba(27, 67, 50, 0.1); }
+/* Input file disembunyikan; labelnya jadi tombol pemilih — wajib
+   clickable penuh di HP (area native input file hanya tombol kecilnya). */
+#berkas-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+#berkas-input:focus-visible ~ .berkas-box { outline: 2px solid var(--pine); outline-offset: 2px; }
+.berkas-box {
+  display: block; margin-top: .4rem; padding: .65rem;
+  border: 1px dashed #9ca3af; border-radius: 6px;
+  font-size: .9rem; font-weight: 500; color: var(--muted);
+  background: #f9fafb; text-align: center; cursor: pointer;
+}
+.berkas-box.ada { border-style: solid; border-color: var(--pine); color: var(--pine); background: #f0f4f2; }
 .field-num {
   display: inline-flex; align-items: center; justify-content: center;
   width: 1.4rem; height: 1.4rem; margin-right: .5rem;
