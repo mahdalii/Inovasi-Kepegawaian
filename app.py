@@ -68,7 +68,7 @@ def validate_form(nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, file_siz
     if not berkas_ok:
         errors.append("Berkas wajib diupload (PDF/JPG/PNG)")
     if not file_size_ok:
-        errors.append("Ukuran berkas melebihi 5 MB")
+        errors.append(f"Ukuran berkas melebihi {config.MAX_UPLOAD_MB} MB")
     return errors
 
 
