@@ -21,7 +21,11 @@
       <small>Contoh: Siti Rahma, S.E.</small>
       <input name="nama" value="{{ data.nama if data }}" placeholder="Contoh: Siti Rahma" required>
     </label>
-    <label><span class="field-num">2</span>Tempat Kerja
+    <label><span class="field-num">2</span>Email Aktif
+      <small>Contoh: siti@example.com</small>
+      <input type="email" name="email" value="{{ data.email if data }}" placeholder="nama@email.com" required>
+    </label>
+    <label><span class="field-num">3</span>Tempat Kerja
       <select name="uptd" required>
         <option value="">— pilih tempat kerja —</option>
         {% for k, v in uptd_labels.items() %}
@@ -29,7 +33,7 @@
         {% endfor %}
       </select>
     </label>
-    <label><span class="field-num">3</span>Jenis Cuti
+    <label><span class="field-num">4</span>Jenis Cuti
       <select name="jenis" id="jenis" required>
         <option value="">— pilih jenis cuti —</option>
         {% for k, v in jenis_labels.items() %}
@@ -37,13 +41,13 @@
         {% endfor %}
       </select>
     </label>
-    <label><span class="field-num">4</span>Tanggal Mulai Cuti
+    <label><span class="field-num">5</span>Tanggal Mulai Cuti
       <input type="date" name="tgl_mulai" required>
     </label>
-    <label><span class="field-num">5</span>Tanggal Selesai Cuti
+    <label><span class="field-num">6</span>Tanggal Selesai Cuti
       <input type="date" name="tgl_selesai" required>
     </label>
-    <label id="label-berkas"><span class="field-num">6</span><span id="label-berkas-text">Berkas Pendukung</span>
+    <label id="label-berkas"><span class="field-num">7</span><span id="label-berkas-text">Berkas Pendukung</span>
       <input type="file" name="berkas" accept=".pdf,.jpg,.jpeg,.png" required>
     </label>
     <p class="hint" id="hint-berkas">Boleh foto dari HP. Maksimal 5 MB.</p>

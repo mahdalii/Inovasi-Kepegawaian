@@ -52,12 +52,12 @@
 <div class="card late-card animate-in delay-1">
   <h3>Perlu Perhatian — belum diproses lebih dari 2 hari</h3>
   <table class="table">
-    <thead><tr><th>Nomor</th><th>Nama</th><th>UPTD</th><th>Jenis</th><th>Masuk</th><th>Status</th></tr></thead>
+    <thead><tr><th>Nomor</th><th>Nama</th><th>Email</th><th>UPTD</th><th>Jenis</th><th>Masuk</th><th>Status</th></tr></thead>
     <tbody>
     {% for row in terlambat %}
       <tr class="late-pulse">
         <td><a href="{{ url_for('detail', pengajuan_id=row.id) }}">{{ row.nomor }}</a></td>
-        <td>{{ row.nama }}</td><td>{{ uptd_labels[row.uptd] }}</td>
+        <td>{{ row.nama }}</td><td>{{ row.email or '' }}</td><td>{{ uptd_labels[row.uptd] }}</td>
         <td>{{ jenis_labels[row.jenis] }}</td><td>{{ row.tgl_masuk }}</td>
         <td>{{ row.status }}</td>
       </tr>
@@ -71,14 +71,14 @@
   <h3>Semua Pengajuan ({{ rows|length }})</h3>
   <table class="table">
     <thead><tr>
-      <th>Nomor</th><th>Nama</th><th>UPTD</th><th>Jenis</th>
+      <th>Nomor</th><th>Nama</th><th>Email</th><th>UPTD</th><th>Jenis</th>
       <th>Tanggal Cuti</th><th>Masuk</th><th>Status</th>
     </tr></thead>
     <tbody>
       {% for row in rows %}
       <tr class="{% if row.id in late_ids %}row-late{% endif %}">
         <td><a href="{{ url_for('detail', pengajuan_id=row.id) }}">{{ row.nomor }}</a></td>
-        <td>{{ row.nama }}</td><td>{{ uptd_labels[row.uptd] }}</td>
+        <td>{{ row.nama }}</td><td>{{ row.email or '' }}</td><td>{{ uptd_labels[row.uptd] }}</td>
         <td>{{ jenis_labels[row.jenis] }}</td>
         <td>{{ row.tgl_mulai }} s/d {{ row.tgl_selesai }}</td>
         <td>{{ row.tgl_masuk }}</td>

@@ -3,15 +3,24 @@ import sqlite3
 import datetime
 import uuid
 
+from functools import wraps
+
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, session, flash
+from flask_mail import Mail, Message
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import config
+
+mail = Mail()
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS cuti (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nomor TEXT NOT NULL UNIQUE,
     nama TEXT NOT NULL,
+    email TEXT,
     uptd TEXT NOT NULL,
     jenis TEXT NOT NULL,
     tgl_mulai TEXT NOT NULL,
@@ -65,10 +74,14 @@ def can_transition(current, new):
     return STATUS_ORDER.get(new, 0) > STATUS_ORDER.get(current, 99)
 
 
-def validate_form(nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, file_size_ok):
+def validate_form(nama, email, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, file_size_ok):
+    import re
+    EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
     errors = []
     if not nama.strip():
         errors.append("Nama wajib diisi")
+    if not email or not EMAIL_RE.match(email.strip()):
+        errors.append("Email valid wajib diisi")
     if not uptd.strip():
         errors.append("Tempat kerja wajib diisi")
     elif uptd not in VALID_UPTD:
@@ -95,7 +108,11 @@ def get_conn(db_path=None):
 def init_db(db_path=None):
     conn = get_conn(db_path)
     conn.executescript(SCHEMA_SQL)
-    conn.commit()
+    # Migration: add 'email' column to existing tables
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(cuti)").fetchall()]
+    if "email" not in cols:
+        conn.execute("ALTER TABLE cuti ADD COLUMN email TEXT")
+        conn.commit()
     conn.close()
 
 
@@ -116,6 +133,61 @@ def safe_filename(original):
     return f"{uuid.uuid4().hex}.{ext}"
 
 
+# ---------- Email notification helpers ----------
+
+def send_cuti_notification(row):
+    """Kirim email notifikasi ke pegawai (row['email']) tentang status cuti.
+    Tidak menghentikan request bila email gagal — error ditangkap & log."""
+    import traceback
+
+    # Only if at least one recipient
+    if not row["email"]:
+        return
+    recipients = [row["email"]]
+
+    subject_map = {
+        "Baru": "Pengajuan cuti diterima",
+        "Diproses": "Pengajuan cuti sedang diproses",
+        "Disetujui": "Pengajuan cuti disetujui",
+        "Ditolak": "Pengajuan cuti ditolak",
+    }
+    status_label = subject_map.get(row["status"], f"Update status: {row['status']}")
+    jenis_label = JENIS_LABEL.get(row["jenis"], row["jenis"])
+
+    body_lines = [
+        f"Yth. {row['nama']},",
+        "",
+        status_label + ".",
+        "",
+        "Detail pengajuan:",
+        f"  Nomor      : {row['nomor']}",
+        f"  Jenis cuti : {jenis_label}",
+        f"  Tanggal    : {row['tgl_mulai']} s/d {row['tgl_selesai']}",
+        f"  UPTD       : {UPTD_LABEL.get(row['uptd'], row['uptd'])}",
+        f"  Status     : {row['status']}",
+    ]
+    if row["catatan"]:
+        body_lines += ["", f"Catatan: {row['catatan']}"]
+    body_lines += [
+        "",
+        "Cek status lengkap di: " + request.host_url.rstrip("/") + url_for("status"),
+        "",
+        "Hormat kami,",
+        "Sistem Cuti",
+    ]
+
+    msg = Message(
+        subject=status_label,
+        sender=config.MAIL_USERNAME,
+        recipients=recipients,
+        body="\n".join(body_lines),
+    )
+    try:
+        mail.send(msg)
+    except Exception:
+        traceback.print_exc()
+
+
 def gen_nomor(conn, today=None):
     today = today or datetime.date.today()
     year = today.strftime("%Y")
@@ -125,15 +197,15 @@ def gen_nomor(conn, today=None):
     return f"CUT-{year}-{row['n'] + 1:04d}"
 
 
-def save_pengajuan(conn, nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk, berkas_path=None):
+def save_pengajuan(conn, nama, email, uptd, jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk, berkas_path=None):
     last_error = None
     for _ in range(3):
         nomor = gen_nomor(conn, datetime.date.fromisoformat(tgl_masuk))
         try:
             conn.execute(
-                "INSERT INTO cuti (nomor, nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas, status, catatan, tgl_masuk) "
-                "VALUES (?,?,?,?,?,?,?,'Baru','',?)",
-                (nomor, nama.strip(), uptd.strip(), jenis, tgl_mulai, tgl_selesai, berkas, tgl_masuk),
+                "INSERT INTO cuti (nomor, nama, email, uptd, jenis, tgl_mulai, tgl_selesai, berkas, status, catatan, tgl_masuk) "
+                "VALUES (?,?,?,?,?,?,?,?,?,'',?)",
+                (nomor, nama.strip(), email.strip()[:255], uptd.strip(), jenis, tgl_mulai, tgl_selesai, berkas, 'Baru', tgl_masuk),
             )
             conn.commit()
             return nomor
@@ -153,6 +225,14 @@ def create_app():
     init_db()
     os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
 
+    # --- Mail configuration ---
+    app.config["MAIL_SERVER"] = config.MAIL_SERVER
+    app.config["MAIL_PORT"] = config.MAIL_PORT
+    app.config["MAIL_USERNAME"] = config.MAIL_USERNAME
+    app.config["MAIL_PASSWORD"] = config.MAIL_PASSWORD
+    app.config["MAIL_USE_TLS"] = config.MAIL_USE_TLS
+    mail.init_app(app)
+
     @app.route("/", methods=["GET", "POST"])
     def form_pegawai():
         if request.method == "POST":
@@ -165,9 +245,10 @@ def create_app():
                 f.stream.seek(0)
             size_ok = size is not None and size <= config.MAX_UPLOAD_MB * 1024 * 1024
             errors = validate_form(
-                request.form.get("nama", ""), request.form.get("uptd", ""),
-                request.form.get("jenis", ""), request.form.get("tgl_mulai", ""),
-                request.form.get("tgl_selesai", ""), berkas_ok, size_ok,
+                request.form.get("nama", ""), request.form.get("email", ""),
+                request.form.get("uptd", ""), request.form.get("jenis", ""),
+                request.form.get("tgl_mulai", ""), request.form.get("tgl_selesai", ""),
+                berkas_ok, size_ok,
             )
             if errors:
                 return render_template("form.html", errors=errors,
@@ -179,12 +260,15 @@ def create_app():
             berkas_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             f.save(berkas_path)
             conn = get_conn()
-            nomor = save_pengajuan(conn, request.form["nama"], request.form["uptd"],
-                                   request.form["jenis"], request.form["tgl_mulai"],
-                                   request.form["tgl_selesai"], filename,
+            nomor = save_pengajuan(conn, request.form["nama"], request.form.get("email", "").strip(),
+                                   request.form["uptd"], request.form["jenis"],
+                                   request.form["tgl_mulai"], request.form["tgl_selesai"], filename,
                                    datetime.date.today().isoformat(),
                                    berkas_path=berkas_path)
+            # Fetch the saved row to send notification
+            row = conn.execute("SELECT * FROM cuti WHERE nomor=?", (nomor,)).fetchone()
             conn.close()
+            send_cuti_notification(row)  # fire-and-forget: errors logged inside helper
             return render_template("form.html", success=nomor,
                                    jenis_labels=JENIS_LABEL, berkas_labels=BERKAS_LABEL,
                                    uptd_labels=UPTD_LABEL)
@@ -267,15 +351,20 @@ def create_app():
         if row is None:
             conn.close()
             return redirect(url_for("dashboard"))
+        status_changed = False
         if request.method == "POST":
             new_status = request.form.get("status", "")
             catatan = request.form.get("catatan", "").strip()
             conn.execute("UPDATE cuti SET catatan=? WHERE id=?", (catatan, pengajuan_id))
             if can_transition(row["status"], new_status):
                 conn.execute("UPDATE cuti SET status=? WHERE id=?", (new_status, pengajuan_id))
+                status_changed = row["status"] != new_status
             conn.commit()
             row = conn.execute("SELECT * FROM cuti WHERE id=?", (pengajuan_id,)).fetchone()
         conn.close()
+        # Send email notification when status changes
+        if status_changed:
+            send_cuti_notification(row)  # fire-and-forget: errors logged inside helper
         allowed_targets = [s for s in STATUS_ORDER if can_transition(row["status"], s)]
         statuses = allowed_targets if row["status"] in allowed_targets else [row["status"]] + allowed_targets
         return render_template("detail.html", row=row,

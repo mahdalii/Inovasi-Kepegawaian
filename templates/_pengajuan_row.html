@@ -1,6 +1,7 @@
 <tr>
   <td>{{ row.nomor }}</td>
   <td>{{ row.nama }}</td>
+  <td>{{ row.email or '' }}</td>
   <td>{{ jenis_labels[row.jenis] }}</td>
   <td>{{ row.tgl_mulai }} s/d {{ row.tgl_selesai }}</td>
   <td><span class="badge badge-{{ row.status|lower }} status-badge" data-status="{{ row.status|lower }}">{{ row.status }}</span></td>

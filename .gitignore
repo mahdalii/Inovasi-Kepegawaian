@@ -1,6 +1,7 @@
 .opencode/
 .superpowers/
 .playwright-mcp/
+.claude/
 .env
 app.zip
 app.zip.tmp
