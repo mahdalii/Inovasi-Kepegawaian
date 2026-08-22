@@ -8,6 +8,7 @@
   </div>
   <table class="table table-detail">
     <tr><th>Nama</th><td>{{ row.nama }}</td></tr>
+    <tr><th>Email</th><td>{{ row.email or '' }}</td></tr>
     <tr><th>UPTD PPD</th><td>{{ uptd_labels[row.uptd] }}</td></tr>
     <tr><th>Jenis Cuti</th><td>{{ jenis_labels[row.jenis] }}</td></tr>
     <tr><th>Tanggal Cuti</th><td>{{ row.tgl_mulai }} s/d {{ row.tgl_selesai }}</td></tr>
