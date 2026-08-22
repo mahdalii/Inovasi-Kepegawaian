@@ -5,12 +5,9 @@ import datetime
 import uuid
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
-from flask_mail import Mail, Message
 from supabase import create_client
 
 import config
-
-mail = Mail()
 
 VALID_JENIS = {"tahunan", "sakit", "alasan_penting", "melahirkan"}
 
@@ -54,14 +51,10 @@ def can_transition(current, new):
     return STATUS_ORDER.get(new, 0) > STATUS_ORDER.get(current, 99)
 
 
-def validate_form(nama, email, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, file_size_ok):
-    import re
-    EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+def validate_form(nama, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, file_size_ok):
     errors = []
     if not nama.strip():
         errors.append("Nama wajib diisi")
-    if not email or not EMAIL_RE.match(email.strip()):
-        errors.append("Email valid wajib diisi")
     if not uptd.strip():
         errors.append("Unit kerja wajib diisi")
     elif uptd not in VALID_UPTD:
@@ -124,14 +117,14 @@ def get_nomor_value(sb, tahun):
 # Konkurensi tinggi bisa lompat nomor — upgrade ke sequence postgres kalau perlu.
 
 
-def save_pengajuan(sb, nama, email, uptd, jenis, tgl_mulai, tgl_selesai, filename, tgl_masuk):
+def save_pengajuan(sb, nama, uptd, jenis, tgl_mulai, tgl_selesai, filename, tgl_masuk):
     tahun = tgl_masuk[:4]
     for _ in range(3):
         nilai = get_nomor_value(sb, tahun)
         nomor = format_nomor(tahun, nilai)
         try:
             sb.table("cuti").insert({
-                "nomor": nomor, "nama": nama.strip(), "email": email.strip()[:254],
+                "nomor": nomor, "nama": nama.strip(),
                 "uptd": uptd.strip(), "jenis": jenis, "tgl_mulai": tgl_mulai, "tgl_selesai": tgl_selesai,
                 "berkas": filename, "status": "Baru", "catatan": "", "tgl_masuk": tgl_masuk,
             }).execute()
@@ -141,79 +134,10 @@ def save_pengajuan(sb, nama, email, uptd, jenis, tgl_mulai, tgl_selesai, filenam
     raise RuntimeError("Gagal menyimpan pengajuan")
 
 
-# ---------- Email notification helper ----------
-
-def send_cuti_notification(row):
-    """Kirim notifikasi email ke pegawai (row["email"]) tentang status cuti.
-    Trigger di-submit (Baru) + ganti-status (staff).
-    Tidak gagal-menghentikan request — error ditangkap & log ke console."""
-    import traceback
-    try:
-        email = row.get("email") if hasattr(row, "get") else row["email"]
-    except (KeyError, TypeError):
-        email = None
-    if not email:
-        return
-
-    subject_map = {
-        "Baru": "Pengajuan cuti diterima",
-        "Diproses": "Pengajuan cuti sedang diproses",
-        "Disetujui": "Pengajuan cuti disetujui",
-        "Ditolak": "Pengajuan cuti ditolak",
-    }
-    status_label = subject_map.get(row["status"], f"Update status: {row['status']}")
-    jenis_label = JENIS_LABEL.get(row["jenis"], row["jenis"])
-
-    # status URL — works inside/outside request context
-    try:
-        from flask import has_request_context
-        if has_request_context():
-            status_url = request.host_url.rstrip("/") + url_for("status")
-        else:
-            status_url = "[buka aplikasi untuk cek status]"
-    except Exception:
-        status_url = "[buka aplikasi untuk cek status]"
-
-    body_lines = [
-        f"Yth. {row['nama']},",
-        "",
-        status_label + ".",
-        "",
-        "Detail pengajuan:",
-        f"  Nomor      : {row['nomor']}",
-        f"  Jenis cuti : {jenis_label}",
-        f"  Tanggal    : {row['tgl_mulai']} s/d {row['tgl_selesai']}",
-        f"  UPTD       : {UPTD_LABEL.get(row['uptd'], row['uptd'])}",
-        f"  Status     : {row['status']}",
-    ]
-    catatan = row.get("catatan") if hasattr(row, "get") else row["catatan"]
-    if catatan:
-        body_lines += ["", f"Catatan: {catatan}"]
-    body_lines += ["", "Cek status lengkap di: " + status_url, "", "Hormat kami,", "Sistem Cuti"]
-
-    msg = Message(
-        subject=status_label,
-        sender=config.MAIL_USERNAME,
-        recipients=[email],
-        body="\n".join(body_lines),
-    )
-    try:
-        mail.send(msg)
-    except Exception:
-        traceback.print_exc()
-
-
 def create_app():
     app = Flask(__name__)
     app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    # Mail config
-    app.config["MAIL_SERVER"] = config.MAIL_SERVER
-    app.config["MAIL_PORT"] = config.MAIL_PORT
-    app.config["MAIL_USERNAME"] = config.MAIL_USERNAME
-    app.config["MAIL_PASSWORD"] = config.MAIL_PASSWORD
-    app.config["MAIL_USE_TLS"] = config.MAIL_USE_TLS
-    mail.init_app(app)
 
     @app.route("/", methods=["GET", "POST"])
     def form_pegawai():
@@ -227,7 +151,7 @@ def create_app():
                 f.stream.seek(0)
             size_ok = size is not None and size <= config.MAX_UPLOAD_MB * 1024 * 1024
             errors = validate_form(
-                request.form.get("nama", ""), request.form.get("email", ""),
+                request.form.get("nama", ""),
                 request.form.get("uptd", ""), request.form.get("jenis", ""),
                 request.form.get("tgl_mulai", ""), request.form.get("tgl_selesai", ""),
                 berkas_ok, size_ok,
@@ -249,7 +173,7 @@ def create_app():
                                        uptd_labels=UPTD_LABEL, data=request.form), 400
             try:
                 nomor = save_pengajuan(get_client(),
-                                       request.form["nama"], request.form.get("email", "").strip(),
+                                       request.form["nama"],
                                        request.form["uptd"], request.form["jenis"],
                                        request.form["tgl_mulai"], request.form["tgl_selesai"], filename,
                                        datetime.date.today().isoformat())
@@ -259,9 +183,6 @@ def create_app():
                 return render_template("form.html", errors=errors,
                                        jenis_labels=JENIS_LABEL, berkas_labels=BERKAS_LABEL,
                                        uptd_labels=UPTD_LABEL, data=request.form), 500
-            # Fetch the just-saved row to send notification
-            row = get_client().table("cuti").select("*").eq("nomor", nomor).execute().data[0]
-            send_cuti_notification(row)  # fire-and-forget: errors logged inside helper
             return render_template("form.html", success=nomor,
                                    jenis_labels=JENIS_LABEL, berkas_labels=BERKAS_LABEL,
                                    uptd_labels=UPTD_LABEL)
@@ -335,20 +256,15 @@ def create_app():
         if not data:
             return redirect(url_for("dashboard"))
         row = data[0]
-        status_changed = False
         if request.method == "POST":
             new_status = request.form.get("status", "")
             catatan = request.form.get("catatan", "").strip()
             upd = {"catatan": catatan}
             if can_transition(row["status"], new_status):
                 upd["status"] = new_status
-                status_changed = row["status"] != new_status
             sb.table("cuti").update(upd).eq("id", pengajuan_id).execute()
             data = sb.table("cuti").select("*").eq("id", pengajuan_id).execute().data
             row = data[0]
-        # Trigger email notification when status changes
-        if status_changed:
-            send_cuti_notification(row)  # fire-and-forget: errors logged inside helper
         allowed_targets = [s for s in STATUS_ORDER if can_transition(row["status"], s)]
         statuses = allowed_targets if row["status"] in allowed_targets else [row["status"]] + allowed_targets
         return render_template("detail.html", row=row,

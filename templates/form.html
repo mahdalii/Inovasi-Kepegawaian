@@ -13,18 +13,14 @@
 {% else %}
 <div class="card animate-in">
   <h2>Formulir Pengajuan Cuti</h2>
-  <p class="hint">Isi 7 pertanyaan di bawah ini, lalu tekan tombol <b>Kirim</b>. Tidak sampai 2 menit.</p>
+  <p class="hint">Isi 6 pertanyaan di bawah ini, lalu tekan tombol <b>Kirim</b>. Tidak sampai 2 menit.</p>
   {% if errors %}<ul class="errors">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
   <form method="post" enctype="multipart/form-data">
     <label><span class="field-num">1</span>Nama Lengkap beserta Gelar
       <small>Contoh: Siti Rahma, S.E.</small>
       <input name="nama" value="{{ data.nama if data }}" placeholder="Contoh: Siti Rahma" required>
     </label>
-    <label><span class="field-num">2</span>Email Aktif
-      <small>Contoh: siti@example.com — untuk notifikasi status cuti</small>
-      <input type="email" name="email" value="{{ data.email if data }}" placeholder="nama@email.com" required>
-    </label>
-    <label><span class="field-num">3</span>Unit Kerja
+    <label><span class="field-num">2</span>Unit Kerja
       <select name="uptd" required>
         <option value="">— pilih unit kerja —</option>
         {% for k, v in uptd_labels.items() %}
@@ -32,7 +28,7 @@
         {% endfor %}
       </select>
     </label>
-    <label><span class="field-num">4</span>Jenis Cuti
+    <label><span class="field-num">3</span>Jenis Cuti
       <select name="jenis" id="jenis" required>
         <option value="">— pilih jenis cuti —</option>
         {% for k, v in jenis_labels.items() %}
@@ -40,13 +36,13 @@
         {% endfor %}
       </select>
     </label>
-    <label><span class="field-num">5</span>Tanggal Mulai Cuti
+    <label><span class="field-num">4</span>Tanggal Mulai Cuti
       <input type="date" name="tgl_mulai" required>
     </label>
-    <label><span class="field-num">6</span>Tanggal Selesai Cuti
+    <label><span class="field-num">5</span>Tanggal Selesai Cuti
       <input type="date" name="tgl_selesai" required>
     </label>
-    <label id="label-berkas"><span class="field-num">7</span><span id="label-berkas-text">Berkas Pendukung</span>
+    <label id="label-berkas"><span class="field-num">6</span><span id="label-berkas-text">Berkas Pendukung</span>
       <input type="file" name="berkas" id="berkas-input" accept=".pdf,.jpg,.jpeg,.png" required>
       <span class="berkas-box" id="berkas-box">Ketuk untuk pilih berkas (PDF/JPG/PNG)</span>
     </label>
