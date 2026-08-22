@@ -63,9 +63,9 @@ def validate_form(nama, email, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, f
     if not email or not EMAIL_RE.match(email.strip()):
         errors.append("Email valid wajib diisi")
     if not uptd.strip():
-        errors.append("Tempat kerja wajib diisi")
+        errors.append("Unit kerja wajib diisi")
     elif uptd not in VALID_UPTD:
-        errors.append("Tempat kerja tidak valid")
+        errors.append("Unit kerja tidak valid")
     if jenis not in VALID_JENIS:
         errors.append("Jenis cuti tidak valid")
     if not tgl_mulai or not tgl_selesai:

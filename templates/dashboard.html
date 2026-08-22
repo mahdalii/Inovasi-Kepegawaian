@@ -32,7 +32,7 @@
   <form method="get">
     <input name="q" value="{{ q }}" placeholder="Cari nama / nomor...">
     <select name="uptd">
-      <option value="">Semua Tempat Kerja</option>
+      <option value="">Semua Unit Kerja</option>
       {% for u in uptds %}
       <option value="{{ u }}" {% if filter_uptd == u %}selected{% endif %}>{{ uptd_labels[u] }}</option>
       {% endfor %}

@@ -25,9 +25,9 @@
       <small>Contoh: siti@example.com — untuk notifikasi status cuti</small>
       <input type="email" name="email" value="{{ data.email if data }}" placeholder="nama@email.com" required>
     </label>
-    <label><span class="field-num">3</span>Tempat Kerja
+    <label><span class="field-num">3</span>Unit Kerja
       <select name="uptd" required>
-        <option value="">— pilih tempat kerja —</option>
+        <option value="">— pilih unit kerja —</option>
         {% for k, v in uptd_labels.items() %}
         <option value="{{ k }}" {% if data and data.uptd == k %}selected{% endif %}>{{ v }}</option>
         {% endfor %}
