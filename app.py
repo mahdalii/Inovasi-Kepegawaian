@@ -12,7 +12,7 @@ import config
 
 mail = Mail()
 
-VALID_JENIS = {"tahunan", "sakit", "alasan_penting"}
+VALID_JENIS = {"tahunan", "sakit", "alasan_penting", "melahirkan"}
 
 VALID_UPTD = {
     "bidang_sekretariat", "bidang_pendapatan",
@@ -80,12 +80,13 @@ def validate_form(nama, email, uptd, jenis, tgl_mulai, tgl_selesai, berkas_ok, f
 
 
 JENIS_LABEL = {"tahunan": "Cuti Tahunan", "sakit": "Cuti Sakit",
-               "alasan_penting": "Cuti Alasan Penting"}
+               "alasan_penting": "Cuti Alasan Penting", "melahirkan": "Cuti Melahirkan"}
 
 BERKAS_LABEL = {
     "tahunan": "Form persetujuan atasan (PDF/JPG/PNG)",
     "sakit": "Bukti sakit (PDF/JPG/PNG)",
     "alasan_penting": "Bukti alasan penting (PDF/JPG/PNG)",
+    "melahirkan": "Bukti melahirkan (PDF/JPG/PNG)",
 }
 
 allowed_ext = lambda name: name.rsplit(".", 1)[-1].lower() in config.ALLOWED_EXTENSIONS
