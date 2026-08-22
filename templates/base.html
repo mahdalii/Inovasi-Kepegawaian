@@ -6,7 +6,7 @@
 <title>{% block title %}Sistem Cuti{% endblock %} — Sekretariat Bapenda Prov Kepri</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -15,6 +15,11 @@
   <h1 class="kop-nama">Sekretariat Badan Pendapatan Daerah</h1>
   <p class="kop-sub">Sistem Informasi Pengajuan Cuti Pegawai</p>
   <div class="kop-rule"></div>
+  <nav class="kop-nav">
+    <a href="{{ url_for('form_pegawai') }}">Ajukan Cuti</a>
+    <a href="{{ url_for('status') }}">Cek Status</a>
+    <a href="{{ url_for('login') }}">Panel Staff</a>
+  </nav>
 </header>
 <main class="container">
 {% block content %}{% endblock %}

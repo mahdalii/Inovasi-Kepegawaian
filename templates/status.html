@@ -5,16 +5,17 @@
   <h2>Cek Status Pengajuan Cuti</h2>
   <p class="hint">Ketik <b>nomor pengajuan</b> (contoh: CUT-2026-0001)
      atau <b>nama Anda</b> di bawah ini.</p>
-  <form method="post">
-    <label>Nomor Pengajuan atau Nama Anda
+  <div class="search-box">
+    <form method="post">
       <input name="q" value="{{ q }}" placeholder="CUT-2026-0001 atau nama Anda" required>
-    </label>
-    <button class="btn btn-primary btn-besar" type="submit">Cek Status</button>
-  </form>
+      <button class="btn btn-primary" type="submit">Cek Status</button>
+    </form>
+  </div>
 </div>
 {% if rows %}
 <div class="card animate-in delay-1">
   <h3>Riwayat Pengajuan ({{ rows|length }})</h3>
+  <div style="overflow-x:auto;">
   <table class="table">
     <thead><tr>
       <th>Nomor</th><th>Nama</th><th>Jenis</th><th>Tanggal Cuti</th><th>Status</th>
@@ -23,6 +24,7 @@
       {% for row in rows %}{% include "_pengajuan_row.html" %}{% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% elif request.method == "POST" %}
 <div class="card animate-in"><p>Belum ada pengajuan yang cocok dengan nomor/nama tersebut.</p></div>

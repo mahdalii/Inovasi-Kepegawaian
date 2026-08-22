@@ -27,23 +27,23 @@
 <div class="card animate-in delay-1">
   <div class="row-between">
     <h2>Antrian Pengajuan Cuti</h2>
-    <a class="btn" href="{{ url_for('logout') }}">Keluar</a>
+    <a class="btn btn-sekunder" href="{{ url_for('logout') }}">Keluar</a>
   </div>
-  <form method="get">
-    <input name="q" value="{{ q }}" placeholder="Cari nama / nomor...">
-    <select name="uptd">
+  <form method="get" style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top:1rem;">
+    <input name="q" value="{{ q }}" placeholder="Cari nama / nomor..." style="flex:1; min-width:180px;">
+    <select name="uptd" style="min-width:180px;">
       <option value="">Semua Unit Kerja</option>
       {% for u in uptds %}
       <option value="{{ u }}" {% if filter_uptd == u %}selected{% endif %}>{{ uptd_labels[u] }}</option>
       {% endfor %}
     </select>
-    <select name="status">
+    <select name="status" style="min-width:140px;">
       <option value="">Semua status</option>
       {% for s in statuses %}
       <option value="{{ s }}" {% if filter_status == s %}selected{% endif %}>{{ s }}</option>
       {% endfor %}
     </select>
-    <button class="btn" type="submit">Filter</button>
+    <button class="btn btn-primary" type="submit" style="white-space:nowrap;">Filter</button>
   </form>
 </div>
 
@@ -51,6 +51,7 @@
 {% if terlambat %}
 <div class="card late-card animate-in delay-1">
   <h3>Perlu Perhatian — belum diproses lebih dari 2 hari</h3>
+  <div style="overflow-x:auto;">
   <table class="table">
     <thead><tr><th>Nomor</th><th>Nama</th><th>Email</th><th>UPTD</th><th>Jenis</th><th>Masuk</th><th>Status</th></tr></thead>
     <tbody>
@@ -59,16 +60,18 @@
         <td><a href="{{ url_for('detail', pengajuan_id=row.id) }}">{{ row.nomor }}</a></td>
         <td>{{ row.nama }}</td><td>{{ row.email or '' }}</td><td>{{ uptd_labels[row.uptd] }}</td>
         <td>{{ jenis_labels[row.jenis] }}</td><td>{{ row.tgl_masuk }}</td>
-        <td>{{ row.status }}</td>
+        <td><span class="badge badge-{{ row.status|lower }} status-badge" data-status="{{ row.status|lower }}">{{ row.status }}</span></td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% endif %}
 
 <div class="card animate-in delay-2">
   <h3>Semua Pengajuan ({{ rows|length }})</h3>
+  <div style="overflow-x:auto;">
   <table class="table">
     <thead><tr>
       <th>Nomor</th><th>Nama</th><th>Email</th><th>UPTD</th><th>Jenis</th>
@@ -87,6 +90,7 @@
       {% endfor %}
     </tbody>
   </table>
-  {% if not rows %}<p>Belum ada pengajuan.</p>{% endif %}
+  </div>
+  {% if not rows %}<p class="hint" style="text-align:center;">Belum ada pengajuan.</p>{% endif %}
 </div>
 {% endblock %}
