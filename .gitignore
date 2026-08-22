@@ -12,3 +12,4 @@ cuti.db
 uploads/*
 !uploads/.gitkeep
 .venv/
+.env*
