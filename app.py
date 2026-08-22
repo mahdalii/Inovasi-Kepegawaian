@@ -168,9 +168,19 @@ def send_cuti_notification(row):
     ]
     if row["catatan"]:
         body_lines += ["", f"Catatan: {row['catatan']}"]
+    # Build status link — work inside/outside request context
+    try:
+        from flask import has_request_context
+        if has_request_context():
+            status_url = request.host_url.rstrip("/") + url_for("status")
+        else:
+            status_url = "[buka aplikasi untuk cek status]"
+    except Exception:
+        status_url = "[buka aplikASI untuk cek status]"
+
     body_lines += [
         "",
-        "Cek status lengkap di: " + request.host_url.rstrip("/") + url_for("status"),
+        "Cek status lengkap di: " + status_url,
         "",
         "Hormat kami,",
         "Sistem Cuti",
